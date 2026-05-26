@@ -7,13 +7,9 @@ SERVER = "ws://192.168.29.197:6001/ws"
 
 async def connect():
 
-    async with websockets.connect(
-        SERVER
-    ) as ws:
+    async with websockets.connect(SERVER) as ws:
 
-        print(
-            "Connected"
-        )
+        print("Connected")
 
         await ws.send(
             json.dumps(
@@ -28,15 +24,18 @@ async def connect():
             msg = await ws.recv()
 
             print(
+                "Received:",
                 msg
             )
 
             if msg == "launch":
 
+                print(
+                    "Launching"
+                )
+
                 subprocess.Popen(
                     "notepad.exe"
                 )
 
-asyncio.run(
-    connect()
-)
+asyncio.run(connect())
