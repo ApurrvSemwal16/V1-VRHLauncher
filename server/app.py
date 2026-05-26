@@ -7,8 +7,8 @@ templates = Jinja2Templates(
     directory="server/templates"
 )
 
-clients = []
-connections = []
+clients = {}
+connections = {}
 
 @app.get("/")
 async def home(request: Request):
@@ -17,18 +17,31 @@ async def home(request: Request):
         request=request,
         name="index.html",
         context={
-            "clients":clients
+            "clients": clients.keys()
         }
     )
 
 @app.post("/launch")
 async def launch():
 
-    for ws in connections:
+    print("LAUNCH SENT")
 
-        await ws.send_text(
-            "launch"
-        )
+    for name, ws in connections.items():
+
+        try:
+
+            await ws.send_text(
+                "launch"
+            )
+
+            print(
+                "sent to",
+                name
+            )
+
+        except:
+
+            pass
 
     return {
         "ok":True
@@ -41,16 +54,38 @@ async def websocket_endpoint(
 
     await websocket.accept()
 
-    connections.append(
-        websocket
-    )
-
     data = await websocket.receive_json()
 
-    clients.append(
-        data["name"]
+    name = data["name"]
+
+    clients[name] = True
+
+    connections[name] = websocket
+
+    print(
+        name,
+        "connected"
     )
 
-    while True:
+    try:
 
-        await websocket.receive_text()
+        while True:
+
+            await websocket.receive_text()
+
+    except:
+
+        print(
+            name,
+            "disconnected"
+        )
+
+        clients.pop(
+            name,
+            None
+        )
+
+        connections.pop(
+            name,
+            None
+        )
