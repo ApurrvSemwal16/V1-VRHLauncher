@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>VRH Launcher</title>
+</head>
+
+<body>
+
+<h1>VRH Launcher</h1>
+
+<h2>Connected Clients</h2>
+
+<ul>
+
+{% for client in clients %}
+
+<li>{{ client }}</li>
+
+{% endfor %}
+
+</ul>
+
+<button onclick="launch()">
+Launch Test
+</button>
+
+<script>
+
+async function launch(){
+
+    await fetch(
+        "/launch",
+        {
+            method:"POST"
+        }
+    )
+
+}
+
+</script>
+
+</body>
+
+</html>
