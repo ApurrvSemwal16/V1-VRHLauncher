@@ -1,0 +1,12 @@
+{
+  "title": "Driver Sign-In",
+  "name_placeholder": "First and Lastname",
+  "birthday_placeholder": "Birthday",
+  "email_placeholder": "Email",
+  "phone_placeholder": "Phone",
+  "show_phone": true,
+  "text_block": "<b>VRH IS NOT LIABLE FOR ANY INJURY CASUED DUE TO INCORRECT USAGE OF THE SIMULATOR </b>",
+  "accept_text": "Accept",
+  "send_button": "Register",
+  "clear_button": "Clear"
+}

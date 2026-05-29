@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Assists — VRH Launcher</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding: 20px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #2a2a4a; }
+  header h1 { font-size: 22px; font-weight: 600; color: #fff; }
+  header h1 span { color: #4a9eff; }
+
+  nav { display: flex; gap: 6px; }
+  nav a {
+    padding: 7px 16px; border-radius: 6px; font-size: 13px; text-decoration: none;
+    color: #888; border: 1px solid #2a2a4a; transition: background 0.15s;
+  }
+  nav a:hover { background: #2a2a4a; color: #e0e0e0; }
+  nav a.active { background: #0f3460; color: #4a9eff; border-color: #4a9eff; }
+
+  h2 { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 18px; }
+
+  .btn { padding: 8px 18px; border-radius: 6px; border: none; background: #4a9eff; color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: #2979ff; }
+  .btn.danger { background: #ff5252; }
+  .btn.danger:hover { background: #d32f2f; }
+  .btn.ghost { background: transparent; border: 1px solid #3a3a5a; color: #e0e0e0; }
+  .btn.ghost:hover { background: #2a2a4a; }
+  .btn.sm { padding: 5px 12px; font-size: 12px; }
+
+  .profile-table {
+    width: 100%; background: #16213e; border-radius: 10px; overflow: hidden;
+    border: 1px solid #2a2a4a; margin-top: 16px;
+  }
+  .table-head, .table-row { display: grid; grid-template-columns: 60px 1fr auto; align-items: center; gap: 12px; padding: 12px 18px; }
+  .table-head { background: #0f3460; font-size: 13px; font-weight: 600; color: #fff; border-bottom: 1px solid #2a2a4a; }
+  .table-row { border-bottom: 1px solid #2a2a4a; }
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: #1a2848; }
+  .row-actions { display: flex; gap: 6px; }
+
+  .id-cell { color: #888; font-size: 13px; }
+  .name-cell { font-size: 14px; color: #e0e0e0; }
+
+  /* Editor */
+  .editor-panel {
+    background: #16213e; border: 1px solid #2a2a4a; border-radius: 10px;
+    padding: 24px; margin-top: 16px;
+  }
+  .editor-panel h3 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .info { font-size: 12px; color: #888; margin-bottom: 18px; line-height: 1.5; }
+  .info strong { color: #4a9eff; }
+
+  .field { margin-bottom: 16px; }
+  .field-label { font-size: 13px; color: #e0e0e0; margin-bottom: 6px; display: block; }
+  .field-label .side { font-style: italic; color: #888; font-size: 12px; margin-left: 4px; }
+
+  .field input[type=text], .field select {
+    width: 100%; padding: 8px 12px; background: #fff; color: #000;
+    border: none; border-radius: 4px; font-size: 13px; outline: none;
+  }
+  .field input[type=text]:focus, .field select:focus { box-shadow: 0 0 0 2px #4a9eff; }
+
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row .val { min-width: 50px; font-size: 13px; color: #e0e0e0; }
+  .slider-row input[type=range] { flex: 1; accent-color: #4a9eff; }
+
+  .check-box {
+    display: inline-block; width: 28px; height: 28px; border-radius: 4px;
+    background: #fff; cursor: pointer; position: relative; transition: background 0.15s;
+  }
+  .check-box.checked { background: #4a3aff; }
+  .check-box.checked::after {
+    content: '✓'; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); color: #fff; font-size: 18px; font-weight: 700;
+  }
+
+  .editor-actions { display: flex; gap: 8px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #2a2a4a; }
+  .btn-cancel { padding: 8px 18px; border-radius: 6px; border: none; background: #2a2a4a; color: #e0e0e0; font-size: 13px; cursor: pointer; }
+  .btn-cancel:hover { background: #3a3a6a; }
+  .btn-save { padding: 8px 18px; border-radius: 6px; border: none; background: #4a9eff; color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .btn-save:hover { background: #2979ff; }
+
+  #toast { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; border: 1px solid #4a9eff; color: #e0e0e0; padding: 11px 18px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 9999; }
+  #toast.show { opacity: 1; }
+  #toast.error { background: #3e1a1a; border-color: #ff5252; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VRH <span>Launcher</span></h1>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/assists" class="active">Assists</a>
+    <a href="/drivers">Drivers</a>
+    <a href="/registration-settings">Registration</a>
+  </nav>
+</header>
+
+<div id="list-view">
+  <h2>Assist Presets</h2>
+  <p class="subtitle">Info: Used as the "Mode" dropdown on each pod when launching.</p>
+  <button class="btn" onclick="newProfile()">Create New</button>
+
+  <div class="profile-table">
+    <div class="table-head">
+      <div>Id</div>
+      <div>Name</div>
+      <div></div>
+    </div>
+    <div id="profile-list"></div>
+  </div>
+</div>
+
+<div id="editor-view" class="hidden">
+  <h2 id="editor-title">Edit</h2>
+  <div class="editor-panel">
+    <h3>Assist Preset</h3>
+    <p class="info">
+      Info: <strong>"Server side"</strong> = AC server will enforce this on all drivers.
+      <strong>"Driver side"</strong> = Each driver can change this at any time
+    </p>
+
+    <div class="field">
+      <label class="field-label">Name</label>
+      <input type="text" id="f-name" placeholder="e.g. Simulation with Damage">
+    </div>
+
+    <div class="field">
+      <label class="field-label">ABS <span class="side">(Server side)</span></label>
+      <select id="f-abs">
+        <option value="off">Off</option>
+        <option value="factory">Car specific</option>
+        <option value="on">On</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Traction Control <span class="side">(Server side)</span></label>
+      <select id="f-tc">
+        <option value="off">Off</option>
+        <option value="factory">Car specific</option>
+        <option value="on">On</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Stability Control <span class="side">(Server side)</span></label>
+      <div class="slider-row">
+        <span class="val" id="f-sc-val">0%</span>
+        <input type="range" id="f-sc" min="0" max="100" step="5" value="0" oninput="document.getElementById('f-sc-val').textContent=this.value+'%'">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Damage <span class="side">(Server side)</span></label>
+      <div class="slider-row">
+        <span class="val" id="f-dmg-val">100%</span>
+        <input type="range" id="f-dmg" min="0" max="100" step="5" value="100" oninput="document.getElementById('f-dmg-val').textContent=this.value+'%'">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Ideal Line <span class="side">(Driver side)</span></label>
+      <div id="f-line" class="check-box" onclick="toggleCheck(this)"></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Auto Shifter <span class="side">(Driver side)</span></label>
+      <div id="f-shifter" class="check-box" onclick="toggleCheck(this)"></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Fuel Rate <span class="side">(Server side)</span></label>
+      <div class="slider-row">
+        <span class="val" id="f-fuel-val">1.0x</span>
+        <input type="range" id="f-fuel" min="0" max="5" step="0.1" value="1" oninput="document.getElementById('f-fuel-val').textContent=parseFloat(this.value).toFixed(1)+'x'">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Tyre Wear <span class="side">(Server side)</span></label>
+      <div class="slider-row">
+        <span class="val" id="f-tyre-val">1.0x</span>
+        <input type="range" id="f-tyre" min="0" max="5" step="0.1" value="1" oninput="document.getElementById('f-tyre-val').textContent=parseFloat(this.value).toFixed(1)+'x'">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Auto Clutch <span class="side">(Server side)</span></label>
+      <div id="f-clutch" class="check-box" onclick="toggleCheck(this)"></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Tyre Blankets <span class="side">(Server side)</span></label>
+      <div id="f-blankets" class="check-box checked" onclick="toggleCheck(this)"></div>
+    </div>
+
+    <div class="editor-actions">
+      <button class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+      <button class="btn-save" onclick="saveProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let profiles = [];
+let editingName = null;  // null = creating new, otherwise editing this name
+
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+}
+
+function getCheck(id) {
+  return document.getElementById(id).classList.contains('checked');
+}
+
+function setCheck(id, val) {
+  const el = document.getElementById(id);
+  if (val) el.classList.add('checked');
+  else el.classList.remove('checked');
+}
+
+async function loadProfiles() {
+  try {
+    const res = await fetch('/api/assists');
+    profiles = await res.json();
+    renderList();
+  } catch(e) {
+    toast('Failed to load profiles', true);
+  }
+}
+
+function renderList() {
+  const list = document.getElementById('profile-list');
+  list.innerHTML = profiles.map((p, i) => `
+    <div class="table-row">
+      <div class="id-cell">${i + 1}</div>
+      <div class="name-cell">${esc(p.name)}</div>
+      <div class="row-actions">
+        <button class="btn sm" onclick="editProfile('${esc(p.name)}')">Edit</button>
+        ${profiles.length > 1 ? `<button class="btn sm danger" onclick="deleteProfile('${esc(p.name)}')">Delete</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function newProfile() {
+  editingName = null;
+  document.getElementById('editor-title').textContent = 'Create';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-abs').value = 'factory';
+  document.getElementById('f-tc').value = 'factory';
+  document.getElementById('f-sc').value = 0;
+  document.getElementById('f-sc-val').textContent = '0%';
+  document.getElementById('f-dmg').value = 100;
+  document.getElementById('f-dmg-val').textContent = '100%';
+  setCheck('f-line', false);
+  setCheck('f-shifter', false);
+  document.getElementById('f-fuel').value = 1;
+  document.getElementById('f-fuel-val').textContent = '1.0x';
+  document.getElementById('f-tyre').value = 1;
+  document.getElementById('f-tyre-val').textContent = '1.0x';
+  setCheck('f-clutch', false);
+  setCheck('f-blankets', true);
+  showEditor();
+}
+
+function editProfile(name) {
+  const p = profiles.find(p => p.name === name);
+  if (!p) return;
+  editingName = name;
+  document.getElementById('editor-title').textContent = 'Edit';
+  document.getElementById('f-name').value = p.name;
+  document.getElementById('f-abs').value = p.abs;
+  document.getElementById('f-tc').value = p.traction_control;
+  document.getElementById('f-sc').value = p.stability_control;
+  document.getElementById('f-sc-val').textContent = p.stability_control + '%';
+  document.getElementById('f-dmg').value = p.damage;
+  document.getElementById('f-dmg-val').textContent = p.damage + '%';
+  setCheck('f-line', p.ideal_line);
+  setCheck('f-shifter', p.auto_shifter);
+  document.getElementById('f-fuel').value = p.fuel_rate;
+  document.getElementById('f-fuel-val').textContent = parseFloat(p.fuel_rate).toFixed(1) + 'x';
+  document.getElementById('f-tyre').value = p.tyre_wear;
+  document.getElementById('f-tyre-val').textContent = parseFloat(p.tyre_wear).toFixed(1) + 'x';
+  setCheck('f-clutch', p.auto_clutch);
+  setCheck('f-blankets', p.tyre_blankets);
+  showEditor();
+}
+
+function showEditor() {
+  document.getElementById('list-view').classList.add('hidden');
+  document.getElementById('editor-view').classList.remove('hidden');
+}
+
+function cancelEdit() {
+  document.getElementById('list-view').classList.remove('hidden');
+  document.getElementById('editor-view').classList.add('hidden');
+}
+
+async function saveProfile() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Name required', true); return; }
+
+  const profile = {
+    name,
+    abs: document.getElementById('f-abs').value,
+    traction_control: document.getElementById('f-tc').value,
+    stability_control: parseInt(document.getElementById('f-sc').value),
+    damage: parseInt(document.getElementById('f-dmg').value),
+    ideal_line: getCheck('f-line'),
+    auto_shifter: getCheck('f-shifter'),
+    fuel_rate: parseFloat(document.getElementById('f-fuel').value),
+    tyre_wear: parseFloat(document.getElementById('f-tyre').value),
+    auto_clutch: getCheck('f-clutch'),
+    tyre_blankets: getCheck('f-blankets'),
+  };
+
+  try {
+    let res;
+    if (editingName) {
+      res = await fetch('/api/assists/' + encodeURIComponent(editingName), {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(profile)
+      });
+    } else {
+      res = await fetch('/api/assists', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(profile)
+      });
+    }
+    if (!res.ok) {
+      const err = await res.json();
+      toast(err.detail || 'Save failed', true);
+      return;
+    }
+    toast(editingName ? 'Profile updated' : 'Profile created');
+    await loadProfiles();
+    cancelEdit();
+  } catch(e) {
+    toast('Save failed: ' + e.message, true);
+  }
+}
+
+async function deleteProfile(name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  try {
+    const res = await fetch('/api/assists/' + encodeURIComponent(name), { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json();
+      toast(err.detail || 'Delete failed', true);
+      return;
+    }
+    toast('Profile deleted');
+    await loadProfiles();
+  } catch(e) {
+    toast('Delete failed: ' + e.message, true);
+  }
+}
+
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 2500);
+}
+
+loadProfiles();
+</script>
+</body>
+</html>

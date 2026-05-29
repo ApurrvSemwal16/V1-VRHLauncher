@@ -1,45 +1,604 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>VRH Launcher</title>
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VRH Launcher</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding: 20px; }
 
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #2a2a4a; flex-wrap: wrap; gap: 10px; }
+  header h1 { font-size: 22px; font-weight: 600; color: #fff; }
+  header h1 span { color: #4a9eff; }
+
+  nav { display: flex; gap: 6px; }
+  nav a { padding: 7px 16px; border-radius: 6px; font-size: 13px; text-decoration: none; color: #888; border: 1px solid #2a2a4a; transition: background 0.15s; }
+  nav a:hover { background: #2a2a4a; color: #e0e0e0; }
+  nav a.active { background: #0f3460; color: #4a9eff; border-color: #4a9eff; }
+
+  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .online-count { font-size: 13px; color: #888; }
+  .online-count strong { color: #4caf50; }
+
+  .btn { padding: 7px 16px; border-radius: 6px; border: 1px solid #3a3a5a; background: #2a2a4a; color: #e0e0e0; font-size: 13px; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: #3a3a6a; }
+  .btn.green { border-color: #4caf50; color: #4caf50; }
+  .btn.green:hover { background: #1b3a1b; }
+  .btn.red { border-color: #ff5252; color: #ff5252; }
+  .btn.red:hover { background: #3e1a1a; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  #pod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+
+  .pod { background: #16213e; border: 1px solid #2a2a4a; border-radius: 10px; overflow: visible; transition: border-color 0.2s; }
+  .pod.running   { border-color: #4caf50; }
+  .pod.launching { border-color: #4a9eff; }
+  .pod.stopping  { border-color: #ff9800; }
+  .pod.error     { border-color: #ff5252; }
+  .pod.offline   { opacity: 0.5; }
+
+  .pod-header { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: #0f3460; border-bottom: 1px solid #2a2a4a; border-radius: 10px 10px 0 0; }
+  .pod-name { flex: 1; font-size: 14px; font-weight: 600; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .status-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 10px; border-radius: 99px; }
+  .s-idle      { background: #2a2a4a; color: #888; }
+  .s-running   { background: #1b5e20; color: #69f0ae; }
+  .s-launching { background: #0d47a1; color: #82b1ff; }
+  .s-stopping  { background: #4a2800; color: #ffb74d; }
+  .s-error     { background: #7f0000; color: #ffcdd2; }
+  .s-offline   { background: #111; color: #444; }
+
+  .pod-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .row { display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 6px; font-size: 13px; }
+  .row label { color: #888; }
+
+  .row select, .row input[type=text] {
+    width: 100%; background: #0f3460; border: 1px solid #2a2a4a; border-radius: 5px;
+    color: #e0e0e0; padding: 5px 8px; font-size: 13px; outline: none;
+  }
+  .row select:focus, .row input:focus { border-color: #4a9eff; }
+  .row select:disabled, .row input:disabled { opacity: 0.4; }
+
+  /* Searchable combobox */
+  .combo { position: relative; }
+  .combo input { width: 100%; background: #0f3460; border: 1px solid #2a2a4a; border-radius: 5px; color: #e0e0e0; padding: 5px 8px; font-size: 13px; outline: none; }
+  .combo input:focus { border-color: #4a9eff; }
+  .combo input:disabled { opacity: 0.4; }
+  .combo-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: #14203c; border: 1px solid #4a9eff; border-radius: 5px;
+    margin-top: 2px; max-height: 220px; overflow-y: auto; display: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+  }
+  .combo-list.open { display: block; }
+  .combo-item { padding: 6px 10px; font-size: 13px; cursor: pointer; color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .combo-item:hover, .combo-item.active { background: #0f3460; color: #fff; }
+  .combo-item.empty { color: #666; cursor: default; }
+  .combo-item.empty:hover { background: transparent; }
+
+  .session-row { display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 6px; font-size: 13px; }
+  .session-ctrl { display: flex; align-items: center; gap: 6px; }
+  .sess-btn { padding: 4px 10px; border-radius: 5px; border: 1px solid #3a3a6a; background: #2a2a4a; color: #e0e0e0; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.1s; white-space: nowrap; }
+  .sess-btn:hover { background: #3a3a7a; }
+  .sess-btn.plus { border-color: #4a9eff; color: #4a9eff; }
+  .sess-btn.plus:hover { background: #0d2a5e; }
+  .sess-val { min-width: 52px; text-align: center; font-size: 13px; font-weight: 600; color: #fff; }
+
+  .check-row { display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 6px; font-size: 13px; }
+  .checks { display: flex; gap: 18px; }
+  .check-label { display: flex; align-items: center; gap: 6px; color: #bbb; cursor: pointer; user-select: none; }
+  .check-label input[type=checkbox] { width: 15px; height: 15px; accent-color: #4a9eff; cursor: pointer; }
+
+  .time-row { display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 6px; font-size: 13px; }
+  .time-val { color: #888; font-size: 13px; font-family: 'Courier New', monospace; }
+  .time-val.running { color: #69f0ae; }
+  .time-val.warning { color: #ffb74d; }
+
+  .pod-footer { padding: 10px 14px 14px; display: flex; gap: 8px; }
+  .btn-start { flex: 1; padding: 9px; border-radius: 6px; border: none; background: #4caf50; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .btn-start:hover { background: #388e3c; }
+  .btn-start:disabled { background: #1a3a1a; color: #555; cursor: not-allowed; }
+
+  .btn-stop-pod { padding: 9px 18px; border-radius: 6px; border: 1px solid #ff5252; background: transparent; color: #ff5252; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .btn-stop-pod:hover:not(:disabled) { background: #3e1a1a; }
+  .btn-stop-pod:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .no-clients { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #555; font-size: 15px; }
+
+  /* Driver autocomplete */
+  .driver-combo { position: relative; }
+  .driver-combo input { width: 100%; background: #0f3460; border: 1px solid #2a2a4a; border-radius: 5px; color: #e0e0e0; padding: 5px 8px; font-size: 13px; outline: none; }
+  .driver-combo input:focus { border-color: #4a9eff; }
+  .driver-suggest {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: #14203c; border: 1px solid #4a9eff; border-radius: 5px;
+    margin-top: 2px; max-height: 200px; overflow-y: auto; display: none;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+  }
+  .driver-suggest.open { display: block; }
+  .driver-suggest-item { padding: 7px 10px; font-size: 12px; cursor: pointer; color: #e0e0e0; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .driver-suggest-item:hover { background: #0f3460; }
+  .driver-suggest-item .ds-name { font-weight: 600; font-size: 13px; }
+  .driver-suggest-item .ds-time { font-size: 11px; color: #4a9eff; white-space: nowrap; }
+
+  #toast { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; border: 1px solid #4a9eff; color: #e0e0e0; padding: 11px 18px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 9999; }
+  #toast.show { opacity: 1; }
+
+</style>
+</head>
 <body>
 
-<h1>VRH Launcher</h1>
+<header>
+  <h1>VRH <span>Launcher</span></h1>
+  <nav>
+    <a href="/" class="active">Dashboard</a>
+    <a href="/assists">Assists</a>
+    <a href="/drivers">Drivers</a>
+    <a href="/registration-settings">Registration</a>
+  </nav>
+  <div class="header-right">
+    <span class="online-count"><strong id="online-count">0</strong> online</span>
+    <button class="btn green" onclick="launchAll()">&#9654; Launch All</button>
+    <button class="btn red"   onclick="stopAll()">&#9632; Stop All</button>
+  </div>
+</header>
 
-<h2>Connected Clients</h2>
+<div id="pod-grid">
+  <div class="no-clients">Waiting for clients to connect…</div>
+</div>
 
-<ul>
+<div id="toast"></div>
 
-{% for client in clients %}
-
-<li>{{ client }}</li>
-
-{% endfor %}
-
-</ul>
-
-<button onclick="launch()">
-Launch Test
-</button>
 
 <script>
+const podState = {};
+let assistProfiles = [];
+let currentClients = {};
 
-async function launch(){
-
-    await fetch(
-        "/launch",
-        {
-            method:"POST"
-        }
-    )
-
+function getState(name) {
+  if (!podState[name]) {
+    podState[name] = {
+      driver:          name,
+      mode:            (assistProfiles[0] && assistProfiles[0].name) || "Simulation NO DAMAGE",
+      session_type:    "Practice",
+      server:          "None",
+      car_id:          "",
+      track_id:        "",
+      track_layout:    "",
+      session_minutes: 0,
+      auto_stop:       false,
+      auto_grid:       true,
+    };
+  }
+  return podState[name];
 }
 
+const SESSION_TYPES = ["Practice","Qualifying","Race","Hot Lap","Time Attack","Drift","Drag"];
+const SERVERS = ["None","VRH Server 1","VRH Server 2","LAN"];
+
+function opts(arr, selected, valKey, labelKey) {
+  return arr.map(item => {
+    const val   = valKey   ? item[valKey]   : item;
+    const label = labelKey ? item[labelKey] : item;
+    const sel   = val === selected ? ' selected' : '';
+    return `<option value="${esc(val)}"${sel}>${esc(label)}</option>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+// Look up display names from stored ids
+function carName(client, carId) {
+  const c = (client.cars || []).find(c => c.id === carId);
+  return c ? c.name : '';
+}
+function trackName(client, trackId, layout) {
+  const t = (client.tracks || []).find(t => t.id === trackId && (t.layout || '') === (layout || ''));
+  return t ? t.name : '';
+}
+
+function makePod(client) {
+  const name    = client.name;
+  const st      = getState(name);
+  const status  = client.status || 'idle';
+  const offline = status === 'offline';
+  const running = status === 'running' || status === 'launching';
+  const cars    = client.cars   || [];
+  const tracks  = client.tracks || [];
+  const modes   = assistProfiles.map(p => p.name);
+
+  let timeDisplay = client.uptime || 'stopped';
+  let timeClass   = 'time-val';
+  if (client.time_remaining !== null && client.time_remaining !== undefined) {
+    const tr = parseInt(client.time_remaining);
+    const m  = Math.floor(tr / 60);
+    const s  = tr % 60;
+    timeDisplay = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} remaining`;
+    timeClass   = tr < 120 ? 'time-val warning' : 'time-val running';
+  }
+
+  return `
+<div class="pod ${status}" id="pod-${name}">
+  <div class="pod-header">
+    <span style="font-size:16px;color:#888;">&#128274;</span>
+    <span class="pod-name">${esc(name)}</span>
+    <span class="status-pill s-${status}">${status}</span>
+  </div>
+  <div class="pod-body">
+
+    <div class="row">
+      <label>Driver</label>
+      <div class="driver-combo">
+        <input type="text" id="driver-input-${name}" value="${esc(st.driver)}" placeholder="Enter driver name…"
+          oninput="driverFilter('${name}',this.value)"
+          onfocus="driverFilter('${name}',this.value)"
+          onblur="driverBlur('${name}')"
+          onchange="setState('${name}','driver',this.value)">
+        <div class="driver-suggest" id="driver-suggest-${name}"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Mode</label>
+      <select onchange="setState('${name}','mode',this.value)">
+        ${opts(modes, st.mode)}
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Session type</label>
+      <select onchange="setState('${name}','session_type',this.value)">
+        ${opts(SESSION_TYPES, st.session_type)}
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Server</label>
+      <select onchange="setState('${name}','server',this.value)">
+        ${opts(SERVERS, st.server)}
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Car</label>
+      <div class="combo">
+        <input type="text" id="car-input-${name}" placeholder="Type to search car..."
+          value="${esc(carName(client, st.car_id))}"
+          ${cars.length === 0 ? 'disabled' : ''}
+          oninput="comboFilter('${name}','car',this.value)"
+          onfocus="comboOpen('${name}','car')"
+          onblur="comboBlur('${name}','car')">
+        <div class="combo-list" id="car-list-${name}"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Track</label>
+      <div class="combo">
+        <input type="text" id="track-input-${name}" placeholder="Type to search track..."
+          value="${esc(trackName(client, st.track_id, st.track_layout))}"
+          ${tracks.length === 0 ? 'disabled' : ''}
+          oninput="comboFilter('${name}','track',this.value)"
+          onfocus="comboOpen('${name}','track')"
+          onblur="comboBlur('${name}','track')">
+        <div class="combo-list" id="track-list-${name}"></div>
+      </div>
+    </div>
+
+    <div class="session-row">
+      <label style="color:#888;font-size:13px;">Session</label>
+      <div class="session-ctrl">
+        <button class="sess-btn" onclick="adjSession('${name}',-5)">-5</button>
+        <button class="sess-btn" onclick="adjSession('${name}',-1)">-1</button>
+        <span class="sess-val" id="sess-${name}">${st.session_minutes === 0 ? 'No limit' : st.session_minutes + ' min'}</span>
+        <button class="sess-btn plus" onclick="adjSession('${name}',1)">+1</button>
+        <button class="sess-btn plus" onclick="adjSession('${name}',5)">+5</button>
+      </div>
+    </div>
+
+    <div class="check-row">
+      <label style="color:#888;font-size:13px;"></label>
+      <div class="checks">
+        <label class="check-label">
+          <input type="checkbox" ${st.auto_stop ? 'checked' : ''} onchange="setState('${name}','auto_stop',this.checked)">
+          Auto-Stop
+        </label>
+        <label class="check-label">
+          <input type="checkbox" ${st.auto_grid ? 'checked' : ''} onchange="setState('${name}','auto_grid',this.checked)">
+          Auto-Grid
+        </label>
+      </div>
+    </div>
+
+    <div class="time-row">
+      <label style="color:#888;font-size:13px;">Time</label>
+      <span class="${timeClass}" id="time-${name}">${esc(timeDisplay)}</span>
+    </div>
+
+  </div>
+  <div class="pod-footer">
+    <button class="btn-start" ${offline ? 'disabled' : ''} onclick="launchOne('${name}')">Start</button>
+    <button class="btn-stop-pod" id="stopbtn-${name}" ${running ? '' : 'disabled'} onclick="stopOne('${name}')">&#9632;</button>
+  </div>
+</div>`;
+}
+
+function setState(name, key, value) {
+  getState(name)[key] = value;
+}
+
+function adjSession(name, delta) {
+  const st = getState(name);
+  st.session_minutes = Math.max(0, st.session_minutes + delta);
+  const el = document.getElementById('sess-' + name);
+  if (el) el.textContent = st.session_minutes === 0 ? 'No limit' : st.session_minutes + ' min';
+}
+
+// ── Searchable combobox ──────────────────────────────────────────────
+function comboItems(name, type) {
+  const client = currentClients[name] || {};
+  return type === 'car' ? (client.cars || []) : (client.tracks || []);
+}
+
+function comboRender(name, type, filter) {
+  const list = document.getElementById(type + '-list-' + name);
+  if (!list) return;
+  const items = comboItems(name, type);
+  const f = (filter || '').toLowerCase();
+  const matches = items.filter(it => it.name.toLowerCase().includes(f)).slice(0, 200);
+
+  if (matches.length === 0) {
+    list.innerHTML = '<div class="combo-item empty">No matches</div>';
+    return;
+  }
+
+  list.innerHTML = matches.map(it => {
+    const val = type === 'car' ? it.id : (it.id + (it.layout ? '__' + it.layout : ''));
+    return `<div class="combo-item" onmousedown="comboPick('${name}','${type}','${esc(val)}','${esc(it.name)}')">${esc(it.name)}</div>`;
+  }).join('');
+}
+
+function comboOpen(name, type) {
+  comboRender(name, type, '');
+  const list = document.getElementById(type + '-list-' + name);
+  if (list) list.classList.add('open');
+}
+
+function comboFilter(name, type, value) {
+  comboRender(name, type, value);
+  const list = document.getElementById(type + '-list-' + name);
+  if (list) list.classList.add('open');
+}
+
+function comboBlur(name, type) {
+  // delay so click (mousedown) registers before closing
+  setTimeout(() => {
+    const list = document.getElementById(type + '-list-' + name);
+    if (list) list.classList.remove('open');
+    // restore the input text to the currently-selected item's name
+    const st = getState(name);
+    const input = document.getElementById(type + '-input-' + name);
+    const client = currentClients[name] || {};
+    if (input) {
+      if (type === 'car') {
+        input.value = carName(client, st.car_id);
+      } else {
+        input.value = trackName(client, st.track_id, st.track_layout);
+      }
+    }
+  }, 180);
+}
+
+function comboPick(name, type, val, label) {
+  const st = getState(name);
+  if (type === 'car') {
+    st.car_id = val;
+  } else {
+    const parts = val.split('__');
+    st.track_id     = parts[0];
+    st.track_layout = parts[1] || '';
+  }
+  const input = document.getElementById(type + '-input-' + name);
+  if (input) input.value = label;
+  const list = document.getElementById(type + '-list-' + name);
+  if (list) list.classList.remove('open');
+}
+
+// ── Driver autocomplete ───────────────────────────────────────────────
+let driverSuggestCache = {};
+
+async function driverFilter(podName, val) {
+  const list = document.getElementById('driver-suggest-' + podName);
+  if (!list) return;
+  setState(podName, 'driver', val);
+  if (!val.trim()) { list.classList.remove('open'); return; }
+
+  try {
+    const res = await fetch('/api/drivers/suggest?q=' + encodeURIComponent(val.trim()));
+    const hits = await res.json();
+    if (!hits.length) { list.classList.remove('open'); return; }
+    list.innerHTML = hits.map(d =>
+      `<div class="driver-suggest-item" onmousedown="driverPick('${podName}','${esc(d.name)}')"><span class="ds-name">${esc(d.name)}</span><span class="ds-time">${esc(d.created)}</span></div>`
+    ).join('');
+    list.classList.add('open');
+  } catch(e) { list.classList.remove('open'); }
+}
+
+function driverPick(podName, name) {
+  setState(podName, 'driver', name);
+  const inp = document.getElementById('driver-input-' + podName);
+  if (inp) inp.value = name;
+  const list = document.getElementById('driver-suggest-' + podName);
+  if (list) list.classList.remove('open');
+}
+
+function driverBlur(podName) {
+  setTimeout(() => {
+    const list = document.getElementById('driver-suggest-' + podName);
+    if (list) list.classList.remove('open');
+  }, 180);
+}
+
+// ── API ──────────────────────────────────────────────────────────────
+async function launchOne(name) {
+  const st = getState(name);
+  if (!st.driver || !st.driver.trim()) { toast('Enter a driver name first'); return; }
+  if (!st.car_id)   { toast('Select a car first');   return; }
+  if (!st.track_id) { toast('Select a track first'); return; }
+  const res = await fetch('/api/launch', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ target: name, ...st })
+  });
+  const data = await res.json();
+  toast(data.ok ? `Launched ${name} (${st.mode})` : `Failed to launch ${name}`);
+}
+
+async function stopOne(name) {
+  await fetch('/api/stop', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ target: name })
+  });
+  toast(`Stop sent to ${name}`);
+}
+
+async function launchAll() {
+  const names = Object.keys(currentClients);
+  let sent = 0;
+  for (const name of names) {
+    const st = getState(name);
+    if (!st.driver || !st.driver.trim()) continue;
+    if (!st.car_id || !st.track_id) continue;
+    await fetch('/api/launch', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ target: name, ...st })
+    });
+    sent++;
+  }
+  toast(sent > 0 ? `Launch sent to ${sent} client(s)` : 'No clients ready (check car + track)');
+}
+
+async function stopAll() {
+  await fetch('/api/stop', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ target: 'ALL' })
+  });
+  toast('Stop sent to all clients');
+}
+
+function isComboFocused(name) {
+  const a = document.activeElement;
+  if (!a) return false;
+  return a.id === ('car-input-' + name) || a.id === ('track-input-' + name);
+}
+
+function renderGrid(data) {
+  const grid  = document.getElementById('pod-grid');
+  const names = Object.keys(data);
+
+  document.getElementById('online-count').textContent =
+    names.filter(n => data[n].status !== 'offline').length;
+
+  if (names.length === 0) {
+    grid.innerHTML = '<div class="no-clients">Waiting for clients to connect…</div>';
+    return;
+  }
+
+  const placeholder = grid.querySelector('.no-clients');
+  if (placeholder) placeholder.remove();
+
+  [...grid.querySelectorAll('.pod')].forEach(el => {
+    if (!data[el.id.replace('pod-', '')]) el.remove();
+  });
+
+  names.forEach(name => {
+    const client = data[name];
+    const status = client.status || 'idle';
+    const running = status === 'running' || status === 'launching';
+    const existing = document.getElementById('pod-' + name);
+
+    if (!existing) {
+      const div = document.createElement('div');
+      div.innerHTML = makePod(client);
+      grid.appendChild(div.firstElementChild);
+    } else {
+      existing.className = 'pod ' + status;
+      const pill = existing.querySelector('.status-pill');
+      if (pill) { pill.className = 'status-pill s-' + status; pill.textContent = status; }
+      const stopBtn = document.getElementById('stopbtn-' + name);
+      if (stopBtn) stopBtn.disabled = !running;
+      const startBtn = existing.querySelector('.btn-start');
+      if (startBtn) startBtn.disabled = status === 'offline';
+
+      const timeEl = document.getElementById('time-' + name);
+      if (timeEl) {
+        let timeDisplay = client.uptime || 'stopped';
+        let timeClass   = 'time-val';
+        if (client.time_remaining !== null && client.time_remaining !== undefined) {
+          const tr = parseInt(client.time_remaining);
+          const m  = Math.floor(tr / 60);
+          const s  = tr % 60;
+          timeDisplay = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} remaining`;
+          timeClass   = tr < 120 ? 'time-val warning' : 'time-val running';
+        }
+        timeEl.className  = timeClass;
+        timeEl.textContent = timeDisplay;
+      }
+
+      // Enable car/track inputs once data arrives (don't clobber while user is typing)
+      if (!isComboFocused(name)) {
+        const carInput   = document.getElementById('car-input-' + name);
+        const trackInput = document.getElementById('track-input-' + name);
+        const st = getState(name);
+        if (carInput && client.cars && client.cars.length > 0) {
+          carInput.disabled = false;
+          if (st.car_id && !carInput.value) carInput.value = carName(client, st.car_id);
+        }
+        if (trackInput && client.tracks && client.tracks.length > 0) {
+          trackInput.disabled = false;
+          if (st.track_id && !trackInput.value) trackInput.value = trackName(client, st.track_id, st.track_layout);
+        }
+      }
+    }
+  });
+}
+
+async function loadAssists() {
+  try {
+    const res = await fetch('/api/assists');
+    assistProfiles = await res.json();
+  } catch(e) {}
+}
+
+async function poll() {
+  try {
+    const res  = await fetch('/api/clients');
+    currentClients = await res.json();
+    renderGrid(currentClients);
+  } catch(e) {}
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+async function init() {
+  await loadAssists();
+  poll();
+  setInterval(poll, 2000);
+  setInterval(loadAssists, 5000);
+}
+init();
 </script>
-
 </body>
-
 </html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drivers — VRH Launcher</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:20px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #2a2a4a;flex-wrap:wrap;gap:10px}
+  header h1{font-size:22px;font-weight:600;color:#fff}
+  header h1 span{color:#4a9eff}
+  nav{display:flex;gap:6px;flex-wrap:wrap}
+  nav a{padding:7px 16px;border-radius:6px;font-size:13px;text-decoration:none;color:#888;border:1px solid #2a2a4a;transition:background .15s}
+  nav a:hover{background:#2a2a4a;color:#e0e0e0}
+  nav a.active{background:#0f3460;color:#4a9eff;border-color:#4a9eff}
+
+  h2{font-size:28px;font-weight:700;color:#fff;margin-bottom:12px}
+  .toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .btn{padding:7px 16px;border-radius:4px;border:1px solid #4a9eff;background:transparent;color:#4a9eff;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
+  .btn:hover{background:#0f3460}
+  .btn.blue{background:#4a9eff;color:#fff;border-color:#4a9eff}
+  .btn.blue:hover{background:#2979ff}
+  .btn.red{background:#ff5252;color:#fff;border-color:#ff5252}
+  .btn.red:hover{background:#d32f2f}
+  .btn.sm{padding:4px 12px;font-size:11px}
+
+  .search-bar{margin-bottom:14px}
+  .search-bar input{padding:7px 12px;background:#16213e;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;width:100%;max-width:400px;outline:none}
+  .search-bar input:focus{border-color:#4a9eff}
+  .search-bar input::placeholder{color:#666}
+
+  .driver-table{width:100%;border-collapse:collapse;background:#16213e;border-radius:8px;overflow:hidden;border:1px solid #2a2a4a}
+  .driver-table th,.driver-table td{padding:9px 12px;text-align:left;font-size:13px;border-bottom:1px solid #2a2a4a}
+  .driver-table th{background:#0f3460;color:#fff;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  .driver-table tr:hover{background:#1a2848}
+  .driver-table tr:last-child td{border-bottom:none}
+  .dpi-badge{display:inline-block;padding:2px 10px;border-radius:4px;background:#ff5252;color:#fff;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;transition:background .15s}
+  .dpi-badge:hover{background:#ff1744}
+  .cb{width:16px;height:16px;accent-color:#4a9eff}
+  .email-link{color:#4a9eff;text-decoration:none}
+  .email-link:hover{text-decoration:underline}
+
+  .edit-input{padding:4px 8px;background:#0f3460;border:1px solid #4a9eff;border-radius:3px;color:#e0e0e0;font-size:12px;width:100%;outline:none}
+
+  .actions-cell{display:flex;gap:4px;flex-wrap:nowrap}
+
+  .no-data{text-align:center;padding:40px;color:#555;font-size:14px}
+
+  #toast{position:fixed;bottom:24px;right:24px;background:#1e3a5f;border:1px solid #4a9eff;color:#e0e0e0;padding:11px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9999}
+  #toast.show{opacity:1}
+  #toast.error{background:#3e1a1a;border-color:#ff5252}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal-overlay.open{display:flex}
+  .modal{background:#16213e;border:1px solid #2a2a4a;border-radius:10px;padding:24px;width:100%;max-width:420px}
+  .modal h3{color:#fff;font-size:18px;margin-bottom:16px}
+  .modal .field{margin-bottom:12px}
+  .modal .field label{display:block;font-size:12px;color:#888;margin-bottom:4px}
+  .modal .field input{width:100%;padding:7px 10px;background:#0f3460;border:1px solid #2a2a4a;border-radius:4px;color:#e0e0e0;font-size:13px;outline:none}
+  .modal .field input:focus{border-color:#4a9eff}
+  .modal-actions{display:flex;gap:8px;margin-top:18px}
+  .modal-actions .btn-save{padding:8px 20px;border:none;border-radius:6px;background:#4a9eff;color:#fff;font-size:13px;font-weight:500;cursor:pointer}
+  .modal-actions .btn-save:hover{background:#2979ff}
+  .modal-actions .btn-cancel{padding:8px 20px;border:none;border-radius:6px;background:#2a2a4a;color:#e0e0e0;font-size:13px;cursor:pointer}
+  .modal-actions .btn-cancel:hover{background:#3a3a6a}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VRH <span>Launcher</span></h1>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/assists">Assists</a>
+    <a href="/drivers" class="active">Drivers</a>
+    <a href="/registration-settings">Registration</a>
+  </nav>
+</header>
+
+<h2>Drivers</h2>
+
+<div class="toolbar">
+  <button class="btn" onclick="openCreateModal()">Create New</button>
+  <button class="btn" onclick="location.href='/api/drivers/export/csv'">Export as CSV</button>
+  <button class="btn" onclick="location.href='/api/drivers/export/json'">Export as JSON</button>
+</div>
+
+<div class="search-bar">
+  <input type="text" id="search-input" placeholder="🔍 Search.." oninput="renderTable()">
+</div>
+
+<table class="driver-table">
+  <thead>
+    <tr>
+      <th style="width:40px"><input type="checkbox" class="cb" id="select-all" onclick="toggleAll(this)"></th>
+      <th>Id</th>
+      <th>Name</th>
+      <th>DPI</th>
+      <th>Birthday</th>
+      <th>Email</th>
+      <th>Phone</th>
+      <th>Signed</th>
+      <th>VIP</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="driver-body"></tbody>
+</table>
+
+<div id="toast"></div>
+
+<!-- Create/Edit Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Create Driver</h3>
+    <div class="field"><label>Name</label><input type="text" id="m-name"></div>
+    <div class="field"><label>Birthday</label><input type="text" id="m-birthday" placeholder="M/D/YYYY"></div>
+    <div class="field"><label>Email</label><input type="text" id="m-email"></div>
+    <div class="field"><label>Phone</label><input type="text" id="m-phone"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let drivers=[];
+let editId=null;
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+
+async function loadDrivers(){
+  try{const res=await fetch('/api/drivers');drivers=await res.json();renderTable()}
+  catch(e){toast('Failed to load drivers',true)}
+}
+
+function renderTable(){
+  const body=document.getElementById('driver-body');
+  const q=(document.getElementById('search-input').value||'').toLowerCase();
+  const filtered=drivers.filter(d=>{
+    const s=`${d.id} ${d.name} ${d.email} ${d.phone} ${d.birthday}`.toLowerCase();
+    return s.includes(q);
+  });
+  // Sort by id descending (newest first)
+  filtered.sort((a,b)=>(b.id||0)-(a.id||0));
+
+  if(filtered.length===0){
+    body.innerHTML='<tr><td colspan="11" class="no-data">No drivers found</td></tr>';
+    return;
+  }
+
+  body.innerHTML=filtered.map(d=>`
+    <tr>
+      <td><input type="checkbox" class="cb row-cb" data-id="${d.id}"></td>
+      <td>${d.id}</td>
+      <td>${esc(d.name)}</td>
+      <td><a class="dpi-badge" href="/dpi/${d.id}" title="View Driver Performance Index">DPI</a></td>
+      <td>${esc(d.birthday)}</td>
+      <td><a class="email-link" href="mailto:${esc(d.email)}">${esc(d.email)}</a></td>
+      <td>${esc(d.phone)}</td>
+      <td><input type="checkbox" class="cb" ${d.signed?'checked':''} onchange="toggleField(${d.id},'signed',this.checked)"></td>
+      <td><input type="checkbox" class="cb" ${d.vip?'checked':''} onchange="toggleField(${d.id},'vip',this.checked)"></td>
+      <td style="font-size:12px;color:#888">${esc(d.created)}</td>
+      <td><div class="actions-cell">
+        <button class="btn sm blue" onclick="openEditModal(${d.id})">Edit</button>
+        <button class="btn sm red" onclick="deleteDriver(${d.id})">Delete</button>
+      </div></td>
+    </tr>
+  `).join('');
+}
+
+function toggleAll(el){
+  document.querySelectorAll('.row-cb').forEach(cb=>cb.checked=el.checked);
+}
+
+async function toggleField(id,field,val){
+  const d=drivers.find(x=>x.id===id);
+  if(!d)return;
+  d[field]=val;
+  try{
+    await fetch('/api/drivers/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:d.name,birthday:d.birthday||'',email:d.email||'',phone:d.phone||'',signed:!!d.signed,vip:!!d.vip})});
+  }catch(e){toast('Update failed',true)}
+}
+
+function openCreateModal(){
+  editId=null;
+  document.getElementById('modal-title').textContent='Create Driver';
+  document.getElementById('m-name').value='';
+  document.getElementById('m-birthday').value='';
+  document.getElementById('m-email').value='';
+  document.getElementById('m-phone').value='';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openEditModal(id){
+  const d=drivers.find(x=>x.id===id);
+  if(!d)return;
+  editId=id;
+  document.getElementById('modal-title').textContent='Edit Driver #'+id;
+  document.getElementById('m-name').value=d.name||'';
+  document.getElementById('m-birthday').value=d.birthday||'';
+  document.getElementById('m-email').value=d.email||'';
+  document.getElementById('m-phone').value=d.phone||'';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+
+async function saveModal(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){toast('Name is required',true);return}
+  const payload={name,birthday:document.getElementById('m-birthday').value.trim(),email:document.getElementById('m-email').value.trim(),phone:document.getElementById('m-phone').value.trim(),signed:true,vip:false};
+  try{
+    let res;
+    if(editId){
+      const existing=drivers.find(x=>x.id===editId);
+      if(existing){payload.signed=!!existing.signed;payload.vip=!!existing.vip}
+      res=await fetch('/api/drivers/'+editId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    }else{
+      res=await fetch('/api/drivers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    }
+    if(res.ok){toast(editId?'Driver updated':'Driver created');closeModal();await loadDrivers()}
+    else{const err=await res.json();toast(err.detail||'Failed',true)}
+  }catch(e){toast('Error: '+e.message,true)}
+}
+
+async function deleteDriver(id){
+  if(!confirm('Delete driver #'+id+'?'))return;
+  try{
+    const res=await fetch('/api/drivers/'+id,{method:'DELETE'});
+    if(res.ok){toast('Driver deleted');await loadDrivers()}
+    else{const err=await res.json();toast(err.detail||'Delete failed',true)}
+  }catch(e){toast('Error: '+e.message,true)}
+}
+
+function toast(msg,isError){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='show'+(isError?' error':'');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.className='',2500);
+}
+
+loadDrivers();
+</script>
+</body>
+</html>

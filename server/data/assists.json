@@ -1,0 +1,41 @@
+[
+  {
+    "name": "Gamer",
+    "abs": "factory",
+    "traction_control": "factory",
+    "stability_control": 100,
+    "damage": 100,
+    "ideal_line": true,
+    "auto_shifter": true,
+    "fuel_rate": 0.0,
+    "tyre_wear": 0.0,
+    "auto_clutch": true,
+    "tyre_blankets": true
+  },
+  {
+    "name": "Simulation NO DAMAGE",
+    "abs": "factory",
+    "traction_control": "factory",
+    "stability_control": 0,
+    "damage": 0,
+    "ideal_line": false,
+    "auto_shifter": false,
+    "fuel_rate": 1.0,
+    "tyre_wear": 1.0,
+    "auto_clutch": false,
+    "tyre_blankets": true
+  },
+  {
+    "name": "Simulation",
+    "abs": "factory",
+    "traction_control": "factory",
+    "stability_control": 0,
+    "damage": 100,
+    "ideal_line": false,
+    "auto_shifter": false,
+    "fuel_rate": 1.0,
+    "tyre_wear": 1.0,
+    "auto_clutch": false,
+    "tyre_blankets": true
+  }
+]

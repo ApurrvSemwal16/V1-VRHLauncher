@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registration Settings — VRH Launcher</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding: 20px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #2a2a4a; flex-wrap: wrap; gap: 10px; }
+  header h1 { font-size: 22px; font-weight: 600; color: #fff; }
+  header h1 span { color: #4a9eff; }
+
+  nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  nav a { padding: 7px 16px; border-radius: 6px; font-size: 13px; text-decoration: none; color: #888; border: 1px solid #2a2a4a; transition: background 0.15s; }
+  nav a:hover { background: #2a2a4a; color: #e0e0e0; }
+  nav a.active { background: #0f3460; color: #4a9eff; border-color: #4a9eff; }
+
+  h2 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 24px; }
+
+  .settings-form { max-width: 900px; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .field-row label {
+    font-size: 14px;
+    color: #ccc;
+    font-weight: 500;
+  }
+
+  .field-row input[type="text"],
+  .field-row textarea {
+    width: 100%;
+    max-width: 380px;
+    padding: 8px 12px;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    outline: none;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  .field-row textarea {
+    max-width: 700px;
+    min-height: 70px;
+    resize: vertical;
+  }
+
+  .field-row input[type="text"]:focus,
+  .field-row textarea:focus {
+    box-shadow: 0 0 0 2px #4a9eff;
+  }
+
+  .field-row input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    accent-color: #4a3aff;
+    cursor: pointer;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+    align-items: center;
+  }
+
+  .btn-save {
+    padding: 8px 24px;
+    border-radius: 4px;
+    border: none;
+    background: #4a9eff;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-save:hover { background: #2979ff; }
+
+  .btn-preview {
+    padding: 8px 20px;
+    border-radius: 4px;
+    border: 1px solid #3a3a5a;
+    background: #2a2a4a;
+    color: #e0e0e0;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-preview:hover { background: #3a3a6a; }
+
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1e3a5f; border: 1px solid #4a9eff; color: #e0e0e0;
+    padding: 11px 18px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 9999;
+  }
+  #toast.show { opacity: 1; }
+  #toast.error { background: #3e1a1a; border-color: #ff5252; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VRH <span>Launcher</span></h1>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/assists">Assists</a>
+    <a href="/drivers">Drivers</a>
+    <a href="/registration-settings" class="active">Registration</a>
+  </nav>
+</header>
+
+<h2>Registration Settings</h2>
+
+<div class="settings-form">
+  <div class="field-row">
+    <label>Title:</label>
+    <input type="text" id="f-title" placeholder="Driver Sign-In">
+  </div>
+
+  <div class="field-row">
+    <label>Name:</label>
+    <input type="text" id="f-name" placeholder="First and Lastname">
+  </div>
+
+  <div class="field-row">
+    <label>Birthday:</label>
+    <input type="text" id="f-birthday" placeholder="Birthday">
+  </div>
+
+  <div class="field-row">
+    <label>Email:</label>
+    <input type="text" id="f-email" placeholder="Email">
+  </div>
+
+  <div class="field-row">
+    <label>Phone:</label>
+    <input type="text" id="f-phone" placeholder="Phone">
+  </div>
+
+  <div class="field-row">
+    <label>Show Phone:</label>
+    <input type="checkbox" id="f-show-phone" checked>
+  </div>
+
+  <div class="field-row">
+    <label>Text Block:</label>
+    <textarea id="f-text-block"></textarea>
+  </div>
+
+  <div class="field-row">
+    <label>Accept Text:</label>
+    <textarea id="f-accept-text" style="min-height:50px;"></textarea>
+  </div>
+
+  <div class="field-row">
+    <label>Send Button:</label>
+    <input type="text" id="f-send-btn" placeholder="Register">
+  </div>
+
+  <div class="field-row">
+    <label>Clear Button:</label>
+    <input type="text" id="f-clear-btn" placeholder="Clear">
+  </div>
+
+  <div class="actions">
+    <button class="btn-save" onclick="saveSettings()">Save</button>
+    <button class="btn-preview" onclick="window.open('/register','_blank')">Show Driver Registration Page</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/registration-settings');
+    const s = await res.json();
+    document.getElementById('f-title').value = s.title || '';
+    document.getElementById('f-name').value = s.name_placeholder || '';
+    document.getElementById('f-birthday').value = s.birthday_placeholder || '';
+    document.getElementById('f-email').value = s.email_placeholder || '';
+    document.getElementById('f-phone').value = s.phone_placeholder || '';
+    document.getElementById('f-show-phone').checked = s.show_phone !== false;
+    document.getElementById('f-text-block').value = s.text_block || '';
+    document.getElementById('f-accept-text').value = s.accept_text || '';
+    document.getElementById('f-send-btn').value = s.send_button || '';
+    document.getElementById('f-clear-btn').value = s.clear_button || '';
+  } catch(e) {
+    toast('Failed to load settings', true);
+  }
+}
+
+async function saveSettings() {
+  const payload = {
+    title: document.getElementById('f-title').value,
+    name_placeholder: document.getElementById('f-name').value,
+    birthday_placeholder: document.getElementById('f-birthday').value,
+    email_placeholder: document.getElementById('f-email').value,
+    phone_placeholder: document.getElementById('f-phone').value,
+    show_phone: document.getElementById('f-show-phone').checked,
+    text_block: document.getElementById('f-text-block').value,
+    accept_text: document.getElementById('f-accept-text').value,
+    send_button: document.getElementById('f-send-btn').value,
+    clear_button: document.getElementById('f-clear-btn').value,
+  };
+  try {
+    const res = await fetch('/api/registration-settings', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) toast('Settings saved');
+    else toast('Save failed', true);
+  } catch(e) {
+    toast('Save failed: ' + e.message, true);
+  }
+}
+
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 2500);
+}
+
+loadSettings();
+</script>
+</body>
+</html>

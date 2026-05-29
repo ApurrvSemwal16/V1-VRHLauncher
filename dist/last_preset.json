@@ -1,0 +1,11 @@
+{
+  "driver": "Apurrv-HP",
+  "mode": "Simulation NO DAMAGE",
+  "session_type": "Practice",
+  "server": "None",
+  "car": "",
+  "track": "",
+  "session": 1,
+  "auto_stop": true,
+  "auto_grid": true
+}

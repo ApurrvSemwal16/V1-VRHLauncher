@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DPI — VRH Launcher</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:20px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #2a2a4a;flex-wrap:wrap;gap:10px}
+  header h1{font-size:22px;font-weight:600;color:#fff}
+  header h1 span{color:#4a9eff}
+  nav{display:flex;gap:6px;flex-wrap:wrap}
+  nav a{padding:7px 16px;border-radius:6px;font-size:13px;text-decoration:none;color:#888;border:1px solid #2a2a4a;transition:background .15s}
+  nav a:hover{background:#2a2a4a;color:#e0e0e0}
+  nav a.active{background:#0f3460;color:#4a9eff;border-color:#4a9eff}
+
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:#4a9eff;text-decoration:none;font-size:13px;margin-bottom:18px}
+  .back-link:hover{text-decoration:underline}
+
+  .driver-header{margin-bottom:20px}
+  .driver-header h2{font-size:26px;font-weight:700;color:#fff;margin-bottom:4px}
+  .driver-header .dpi-line{font-size:15px;color:#888;display:flex;align-items:center;gap:8px}
+  .dpi-score{font-weight:700;color:#f5c518;font-size:16px}
+  .dpi-date{font-size:13px;color:#666}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+  .stat-card{background:#16213e;border:1px solid #2a2a4a;border-radius:8px;padding:14px 18px}
+  .stat-card .label{font-size:12px;color:#666;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+  .stat-card .value{font-size:22px;font-weight:700;color:#fff}
+  .stat-card .sub{font-size:12px;color:#888;margin-top:2px}
+
+  .section{background:#16213e;border:1px solid #2a2a4a;border-radius:8px;margin-bottom:16px;overflow:hidden}
+  .section-header{background:#0f3460;padding:10px 16px;font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+  .section-header .toggle-icon{font-size:10px;transition:transform .2s;color:#888}
+  .section-header.collapsed .toggle-icon{transform:rotate(-90deg)}
+  .section-body{padding:0}
+
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:9px 14px;font-size:13px;text-align:left;border-bottom:1px solid #2a2a4a}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600;background:#141c36}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#1a2848}
+
+  .car-badge{display:inline-block;padding:2px 8px;border-radius:3px;background:#4a9eff;color:#fff;font-size:10px;font-weight:700;margin-right:4px}
+  .track-name{font-weight:600;color:#e0e0e0}
+  .sub-table{margin-left:32px;margin-bottom:4px}
+  .sub-table td{padding:6px 14px;font-size:12px;color:#aaa;background:#11192e}
+  .expand-row{cursor:pointer}
+  .expand-row:hover td{background:#1e2a44}
+  .expand-icon{font-size:10px;color:#666;margin-right:6px}
+  .expand-icon.open{transform:rotate(90deg);display:inline-block}
+
+  .no-data{padding:40px;text-align:center;color:#555;font-size:14px}
+  .session-type{font-size:11px;padding:1px 6px;border-radius:3px;background:#2a2a4a;color:#aaa}
+  .loading{text-align:center;padding:60px;color:#666}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VRH <span>Launcher</span></h1>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/assists">Assists</a>
+    <a href="/drivers" class="active">Drivers</a>
+    <a href="/registration-settings">Registration</a>
+  </nav>
+</header>
+
+<a href="/drivers" class="back-link">&#8592; Back to Driver List</a>
+
+<div id="content"><div class="loading">Loading DPI data…</div></div>
+
+<script>
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+
+function fmtMin(m){
+  if(!m)return '—';
+  const h=Math.floor(m/60),mm=m%60;
+  return h>0?`${h}h ${mm}m`:`${mm}m`;
+}
+
+function toggleSection(id){
+  const body=document.getElementById('body-'+id);
+  const hdr=document.getElementById('hdr-'+id);
+  if(!body||!hdr)return;
+  const hidden=body.style.display==='none';
+  body.style.display=hidden?'':'none';
+  hdr.classList.toggle('collapsed',!hidden);
+}
+
+function toggleCar(rowId){
+  const sub=document.getElementById('sub-'+rowId);
+  const icon=document.getElementById('icon-'+rowId);
+  if(!sub)return;
+  const hidden=sub.style.display==='none';
+  sub.style.display=hidden?'':'none';
+  if(icon)icon.classList.toggle('open',hidden);
+}
+
+async function loadDPI(){
+  const pathParts=window.location.pathname.split('/');
+  const driverId=parseInt(pathParts[pathParts.length-1]);
+  if(isNaN(driverId)){document.getElementById('content').innerHTML='<div class="no-data">Invalid driver ID</div>';return}
+
+  try{
+    const res=await fetch('/api/drivers/'+driverId+'/dpi');
+    if(!res.ok){document.getElementById('content').innerHTML='<div class="no-data">Driver not found</div>';return}
+    const data=await res.json();
+    render(data);
+  }catch(e){
+    document.getElementById('content').innerHTML='<div class="no-data">Failed to load DPI data: '+esc(e.message)+'</div>';
+  }
+}
+
+function render(data){
+  const d=data.driver;
+  const dpi=data.dpi||0;
+  const sessions=data.session_count||0;
+  const totalMin=data.total_minutes||0;
+  const tracks=data.tracks||[];
+  const cars=data.cars||[];
+
+  let html=`
+  <div class="driver-header">
+    <h2>${esc(d.name)}</h2>
+    <div class="dpi-line">
+      <span>#${d.id} DPI: <span class="dpi-score">${dpi}</span></span>
+      <span class="dpi-date">(${esc(d.created||'')})</span>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="label">Total Sessions</div>
+      <div class="value">${sessions}</div>
+      <div class="sub">${sessions===1?'session':'sessions'} launched</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Total Time</div>
+      <div class="value">${fmtMin(totalMin)}</div>
+      <div class="sub">session minutes</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Different Tracks</div>
+      <div class="value">${tracks.length}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Different Cars</div>
+      <div class="value">${cars.length}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">First Session</div>
+      <div class="value" style="font-size:12px;padding-top:6px">${esc(data.first_session||'—')}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Last Session</div>
+      <div class="value" style="font-size:12px;padding-top:6px">${esc(data.last_session||'—')}</div>
+    </div>
+  </div>`;
+
+  if(sessions===0){
+    html+='<div class="no-data">No sessions recorded yet for this driver.</div>';
+    document.getElementById('content').innerHTML=html;
+    return;
+  }
+
+  // Tracks section
+  html+=`
+  <div class="section">
+    <div class="section-header" id="hdr-tracks" onclick="toggleSection('tracks')">
+      Tracks &nbsp;<span style="color:#888;font-weight:400">— ${tracks.length} different track${tracks.length!==1?'s':''}</span>
+      <span class="toggle-icon">&#9654;</span>
+    </div>
+    <div id="body-tracks">
+      <table>
+        <thead><tr><th>Track</th><th>Sessions</th><th>Time</th><th>Cars Used</th></tr></thead>
+        <tbody>`;
+
+  tracks.forEach((t,ti)=>{
+    const carTags=(t.cars||[]).slice(0,3).map(c=>`<span class="car-badge">${esc(c.car_name)}</span>`).join('');
+    const moreCount=(t.cars||[]).length-3;
+    html+=`<tr>
+      <td class="track-name">${esc(t.track_name)}${t.track_layout?` <small style="color:#666">(${esc(t.track_layout)})</small>`:''}</td>
+      <td>${t.sessions}</td>
+      <td>${fmtMin(t.total_minutes)}</td>
+      <td>${carTags}${moreCount>0?`<span style="color:#666;font-size:11px">+${moreCount} more</span>`:''}</td>
+    </tr>`;
+  });
+
+  html+=`</tbody></table></div></div>`;
+
+  // Cars section
+  html+=`
+  <div class="section">
+    <div class="section-header" id="hdr-cars" onclick="toggleSection('cars')">
+      Cars &nbsp;<span style="color:#888;font-weight:400">— ${cars.length} different car${cars.length!==1?'s':''}</span>
+      <span class="toggle-icon">&#9654;</span>
+    </div>
+    <div id="body-cars">
+      <table>
+        <thead><tr><th>Car</th><th>Sessions</th><th>Time</th><th>Tracks Driven</th></tr></thead>
+        <tbody>`;
+
+  cars.forEach((c,ci)=>{
+    const trackStr=(c.tracks||[]).slice(0,2).map(t=>esc(t.track_name)).join(', ');
+    const moreCount=(c.tracks||[]).length-2;
+    html+=`<tr>
+      <td style="font-weight:600">${esc(c.car_name)}</td>
+      <td>${c.sessions}</td>
+      <td>${fmtMin(c.total_minutes)}</td>
+      <td style="color:#888;font-size:12px">${trackStr}${moreCount>0?`, +${moreCount} more`:''}</td>
+    </tr>`;
+  });
+
+  html+=`</tbody></table></div></div>`;
+
+  document.getElementById('content').innerHTML=html;
+}
+
+loadDPI();
+</script>
+</body>
+</html>
