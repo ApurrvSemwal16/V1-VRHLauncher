@@ -1,4 +1,4 @@
-# VRH Launcher
+  # VRH Launcher
 
 ## Structure
 
@@ -35,14 +35,3 @@ pyinstaller --onefile client/client.py
 ```
 
 Edit `CLIENT_NAME` and `SERVER` at the top of `client.py` before building for each PC.
-
-## What's new vs V1
-
-- Pod-style dashboard per client (matches screenshot)
-- Per-pod: Driver, Mode, Session Type, Server, Car, Track, Session counter, Auto-Stop, Auto-Grid
-- Start / Stop buttons per pod
-- Launch All / Stop All in header
-- Client pushes live status (idle / running / stopped) every 3s
-- Client auto-reconnects if server drops
-- Preset JSON sent to client on launch (ready to extend into AC cfg writing)
-- `/api/clients` endpoint returns live state of all clients
